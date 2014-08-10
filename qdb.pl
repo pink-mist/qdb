@@ -281,6 +281,23 @@ app->start();
 
 __DATA__
 
+@@ approve.html.ep
+% layout 'base';
+% title "Approve quote $id";
+%= form_for url_for("/approve/$id") => (method => 'post') => begin
+  Confirm with password:
+  %= text_field 'pass'
+  %= submit_button 'Confirm'
+%= end
+%= include 'quotediv'
+
+@@ approved.html.ep
+% layout 'base';
+% title 'Quote approved!';
+Quote approved:
+%= include 'quotediv'
+
+
 @@ del.html.ep
 % layout 'base';
 % title "Really delete quote $id?";

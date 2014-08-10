@@ -33,7 +33,7 @@ helper getquote => sub {
 helper getids => sub {
     my $self = shift;
 
-    my $ref = $self->query_all('SELECT id FROM quotes') // [ [ 0 ] ];
+    my $ref = $self->query_all('SELECT id FROM quotes WHERE approved = 1') // [ [ 0 ] ];
 
     return map { $_->[0] } @{$ref};
 };
@@ -55,7 +55,8 @@ helper dbinit => sub {
     $self->db->do('CREATE TABLE IF NOT EXISTS quotes (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         text TEXT,
-        vote INTEGER DEFAULT 0)')
+        vote INTEGER DEFAULT 0,
+        approved BOOLEAN DEFAULT 0)')
     and return $self->render(text => 'DB Initialized.');
     $self->render(text => 'DB Failed to initialize.');
 };
@@ -118,7 +119,7 @@ helper search => sub {
     my $text = shift;
 
     $text    =~ s/^| |$/%/g;
-    my $ref  = $self->query_all('SELECT id FROM quotes WHERE text LIKE ?', $text) // [];
+    my $ref  = $self->query_all('SELECT id FROM quotes WHERE text LIKE ? AND approved = 1', $text) // [];
 
     my @ids  = map { $_->[0] } @{$ref};
     my $id   = $ids[rand @ids] // 0;
@@ -140,6 +141,14 @@ helper editquote => sub {
     my $text = shift;
 
     $self->query('UPDATE quotes SET text = ? WHERE id = ?');
+    $self->getquote($id);
+};
+
+helper approvequote => sub {
+    my $self = shift;
+    my $id   = shift;
+
+    $self->query('UPDATE quotes SET approved = 1 WHERE id = ?', $id);
     $self->getquote($id);
 };
 
@@ -225,15 +234,12 @@ get '/del/:id' => sub {
     $self->render('del');
 };
 
-post '/del/:id' => sub {
+get '/approve/:id' => sub {
     my $self = shift;
     my $id   = $self->param('id');
-    my $pass = $self->param('pass');
 
-    return $self->render(text => 'Access denied') if $pass ne app->config()->{password};
-
-    $self->delquote($id);
-    $self->render('deleted');
+    $self->getquote($id);
+    $self->render('approve');
 };
 
 get '/:id' => sub {
@@ -242,6 +248,32 @@ get '/:id' => sub {
 
     $self->getquote($id);
     $self->render('quote');
+};
+
+under sub {
+    my $self = shift;
+    my $pass = $self->param('pass');
+
+    return 1 if $pass eq app->config()->{password};
+
+    $self->render(text => 'Access denied');
+    return undef;
+};
+
+post '/del/:id' => sub {
+    my $self = shift;
+    my $id   = $self->param('id');
+
+    $self->delquote($id);
+    $self->render('deleted');
+};
+
+post '/approve/:id' => sub {
+    my $self = shift;
+    my $id   = $self->param('id');
+
+    $self->approvequote($id);
+    $self->render('approved');
 };
 
 app->secret(app->config()->{secrets});

@@ -140,7 +140,7 @@ helper editquote => sub {
     my $id   = shift;
     my $text = shift;
 
-    $self->query('UPDATE quotes SET text = ? WHERE id = ?');
+    $self->query('UPDATE quotes SET text = ? WHERE id = ?', $text, $id);
     $self->getquote($id);
 };
 

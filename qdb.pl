@@ -19,10 +19,9 @@ helper getquote => sub {
         $id = $ids[rand @ids] // 0;
     }
 
-    my $ref = { id => 0, text => 'No quote found', vote => 0 };
-    my $sth; $sth = $self->db->prepare('SELECT * FROM quotes WHERE id = ?')
-        and $sth->execute($id)
-        and $ref = $sth->fetchrow_hashref() // $ref;
+    my $ref = $self->query_row('SELECT * FROM quotes WHERE id = ?', $id)
+        // { id => 0, text => 'No quote found', vote => 0 };
+
     chomp $ref->{text};
     $ref->{text} =~ s!\r!!g;
     $self->stash(id    => $ref->{id});
@@ -34,10 +33,7 @@ helper getquote => sub {
 helper getids => sub {
     my $self = shift;
 
-    my $ref = [ [ 0 ] ];
-    my $sth; $sth = $self->db->prepare('SELECT id FROM quotes')
-        and $sth->execute()
-        and $ref = $sth->fetchall_arrayref();
+    my $ref = $self->query_all('SELECT id FROM quotes') // [ [ 0 ] ];
 
     return map { $_->[0] } @{$ref};
 };
@@ -48,9 +44,8 @@ helper addquote => sub {
     $quote    =~ s!\r!!g;
 
     my $id = 0;
-    my $sth; $sth = $self->db->prepare('INSERT INTO quotes (text) VALUES (?)')
-        and $sth->execute($quote)
-        and $id = $self->db->last_insert_id('', '', 'quotes', '');
+    $id = $self->db->last_insert_id('', '', 'quotes', '') if defined
+        $self->query('INSERT INTO quotes (text) VALUES (?)', $quote);
     $self->getquote($id);
 };
 
@@ -63,6 +58,35 @@ helper dbinit => sub {
         vote INTEGER DEFAULT 0)')
     and return $self->render(text => 'DB Initialized.');
     $self->render(text => 'DB Failed to initialize.');
+};
+
+helper query_all => sub {
+    my $self = shift;
+
+    my $q = $self->query(@_);
+    return $q->fetchall_arrayref() if defined $q;
+
+    return undef;
+};
+
+helper query_row => sub {
+    my $self = shift;
+
+    my $q = $self->query(@_);
+    return $q->fetchrow_hashref() if defined $q;
+
+    return undef;
+};
+
+helper query => sub {
+    my $self = shift;
+    my ($sql, @args) = @_;
+
+    my $sth; $sth = $self->db->prepare($sql)
+        and $sth->execute(@args)
+        and return $sth;
+
+    return undef;
 };
 
 helper quotetohtml => sub {
@@ -84,8 +108,7 @@ helper vote => sub {
     my $vote = shift;
 
     my $ref = $self->getquote($id);
-    my $sth; $sth = $self->db->prepare('UPDATE quotes SET vote = ? WHERE id = ?')
-        and $sth->execute($ref->{'vote'} + $vote, $id);
+    $self->query('UPDATE quotes SET vote = ? WHERE id = ?', $ref->{'vote'} + $vote, $id);
 
     $self->getquote($id);
 };
@@ -95,15 +118,11 @@ helper search => sub {
     my $text = shift;
 
     $text    =~ s/^| |$/%/g;
-    my $ref  = [ [ 0 ] ];
-    my $sth; $sth = $self->db->prepare('SELECT id FROM quotes WHERE text LIKE ?')
-        and $sth->execute($text)
-        and $ref  = $sth->fetchall_arrayref() // [];
+    my $ref  = $self->query_all('SELECT id FROM quotes WHERE text LIKE ?', $text) // [];
 
     my @ids  = map { $_->[0] } @{$ref};
     my $id   = $ids[rand @ids] // 0;
 
-    #$self->getquote($id);
     return $id;
 };
 
@@ -112,8 +131,7 @@ helper delquote => sub {
     my $id   = shift;
 
     $self->getquote($id);
-    my $sth; $sth = $self->db->prepare('DELETE FROM quotes WHERE id = ?')
-        and $sth->execute($id);
+    $self->query('DELETE FROM quotes WHERE id = ?', $id);
 };
 
 helper editquote => sub {
@@ -121,8 +139,7 @@ helper editquote => sub {
     my $id   = shift;
     my $text = shift;
 
-    my $sth; $sth = $self->db->prepare('UPDATE quotes SET text = ? WHERE id = ?')
-        and $sth->execute($text, $id);
+    $self->query('UPDATE quotes SET text = ? WHERE id = ?');
     $self->getquote($id);
 };
 

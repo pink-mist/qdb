@@ -10,6 +10,142 @@ plugin 'Config';
 
 plugin 'Database'; #configuration in qdb.conf file
 
+
+## Route section
+get '/init'         => sub { shift->dbinit();                             };
+
+under sub { shift->session(expiration => 604_800); }; #1 week
+
+get  '/'            => sub { shift->loadquote('random')->render('quote'); };
+get  '/:id'         => sub { shift->loadquote()->render('quote');         };
+get  '/:id/voteup'  => sub { shift->vote(1)->render('quote');             };
+get  '/:id/votedn'  => sub { shift->vote(-1)->render('quote');            };
+get  '/list'        => sub { shift->render('list');                       };
+get  '/add'         => sub { shift->render('add');                        };
+post '/add'         => sub { shift->addquote()->render('quote');          };
+post '/search'      => sub { shift->searchquote()->render('quote');       };
+get  '/admin'       => sub { shift->render('login');                      };
+post '/admin'       => sub { shift->login()->render('login');             };
+
+under sub { shift->checklogin() and return 1; return undef; };
+
+get  '/waiting'     => sub { shift->render('waiting');                    };
+get  '/:id/edit'    => sub { shift->loadquote()->render('edit');          };
+post '/:id/edit'    => sub { shift->editquote()->render('quote');         };
+get  '/:id/approve' => sub { shift->approvequote()->render('approved');   };
+get  '/:id/delete'  => sub { shift->deletequote()->render('deleted');     };
+
+
+## Helper section
+helper dbinit => sub {
+    my $self = shift;
+
+    $self->db->do('CREATE TABLE IF NOT EXISTS quotes (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        text TEXT,
+        vote INTEGER DEFAULT 0,
+        approved BOOLEAN DEFAULT 0)')
+    and return $self->render(text => 'DB Initialized.');
+    $self->render(text => 'DB Failed to initialize.');
+};
+
+helper loadquote => sub {
+    my $self = shift;
+    my $id   = shift // $self->param('id');
+    $self->getquote($id);
+
+    return $self;
+};
+
+helper vote => sub {
+    my $self = shift;
+    my $id   = $self->param('id');
+    my $vote = shift;
+
+    my $ref = $self->getquote($id);
+    $self->query('UPDATE quotes SET vote = ? WHERE id = ?', $ref->{'vote'} + $vote, $id);
+
+    $self->loadquote($id);
+};
+
+helper addquote => sub {
+    my $self  = shift;
+    my $quote = $self->param('quote');
+    $quote    =~ s!\r!!g;
+
+    my $id = 0;
+    $id = $self->db->last_insert_id('', '', 'quotes', '') if defined
+        $self->query('INSERT INTO quotes (text) VALUES (?)', $quote);
+    $self->loadquote($id);
+};
+
+helper searchquote => sub {
+    my $self = shift;
+    my $text = $self->param('search');
+
+    $text    =~ s/^| |$/%/g;
+    my $ref  = $self->query_all('SELECT id FROM quotes WHERE text LIKE ? AND approved = 1', $text) // [];
+
+    my @ids  = map { $_->[0] } @{$ref};
+    my $id   = $ids[rand @ids] // 0;
+
+    $self->loadquote($id);
+};
+
+helper login => sub {
+    my $self = shift;
+    my $pass = $self->param('pass');
+
+    if (defined $pass and $pass eq app->config()->{'password'}) {
+        $self->session()->{'admin'} = 1;
+    }
+    else {
+        $self->session()->{'admin'} = 0;
+        if (defined $pass) { $self->stash(error => 'Wrong password'); }
+    }
+};
+
+helper checklogin => sub {
+    my $self = shift;
+
+    return 1 if $self->session()->{admin};
+
+    $self->stash(error => 'Not logged in');
+    $self->render('login');
+    return 0;
+};
+
+helper deletequote => sub {
+    my $self = shift;
+    my $id   = $self->param('id');
+
+    $self->getquote($id);
+    $self->query('DELETE FROM quotes WHERE id = ?', $id);
+
+    return $self;
+};
+
+helper editquote => sub {
+    my $self = shift;
+    my $id   = $self->param('id');
+    my $text = $self->param('quote');
+
+    $self->query('UPDATE quotes SET text = ? WHERE id = ?', $text, $id);
+    $self->loadquote($id);
+};
+
+helper approvequote => sub {
+    my $self = shift;
+    my $id   = $self->param('id');
+
+    $self->query('UPDATE quotes SET approved = 1 WHERE id = ?', $id);
+    $self->loadquote($id);
+};
+
+
+
+
+## Helper utility methods
 helper getquote => sub {
     my $self = shift;
     my $id   = shift;
@@ -32,33 +168,11 @@ helper getquote => sub {
 
 helper getids => sub {
     my $self = shift;
+    my $approved = shift // 1;
 
-    my $ref = $self->query_all('SELECT id FROM quotes WHERE approved = 1') // [ [ 0 ] ];
+    my $ref = $self->query_all('SELECT id FROM quotes WHERE approved = ?', $approved) // [ [ 0 ] ];
 
     return map { $_->[0] } @{$ref};
-};
-
-helper addquote => sub {
-    my $self  = shift;
-    my $quote = shift;
-    $quote    =~ s!\r!!g;
-
-    my $id = 0;
-    $id = $self->db->last_insert_id('', '', 'quotes', '') if defined
-        $self->query('INSERT INTO quotes (text) VALUES (?)', $quote);
-    $self->getquote($id);
-};
-
-helper dbinit => sub {
-    my $self = shift;
-
-    $self->db->do('CREATE TABLE IF NOT EXISTS quotes (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        text TEXT,
-        vote INTEGER DEFAULT 0,
-        approved BOOLEAN DEFAULT 0)')
-    and return $self->render(text => 'DB Initialized.');
-    $self->render(text => 'DB Failed to initialize.');
 };
 
 helper query_all => sub {
@@ -103,211 +217,45 @@ helper quotetohtml => sub {
     return $quote;
 };
 
-helper vote => sub {
-    my $self = shift;
-    my $id   = shift;
-    my $vote = shift;
-
-    my $ref = $self->getquote($id);
-    $self->query('UPDATE quotes SET vote = ? WHERE id = ?', $ref->{'vote'} + $vote, $id);
-
-    $self->getquote($id);
-};
-
-helper search => sub {
-    my $self = shift;
-    my $text = shift;
-
-    $text    =~ s/^| |$/%/g;
-    my $ref  = $self->query_all('SELECT id FROM quotes WHERE text LIKE ? AND approved = 1', $text) // [];
-
-    my @ids  = map { $_->[0] } @{$ref};
-    my $id   = $ids[rand @ids] // 0;
-
-    return $id;
-};
-
-helper delquote => sub {
-    my $self = shift;
-    my $id   = shift;
-
-    $self->getquote($id);
-    $self->query('DELETE FROM quotes WHERE id = ?', $id);
-};
-
-helper editquote => sub {
-    my $self = shift;
-    my $id   = shift;
-    my $text = shift;
-
-    $self->query('UPDATE quotes SET text = ? WHERE id = ?', $text, $id);
-    $self->getquote($id);
-};
-
-helper approvequote => sub {
-    my $self = shift;
-    my $id   = shift;
-
-    $self->query('UPDATE quotes SET approved = 1 WHERE id = ?', $id);
-    $self->getquote($id);
-};
-
-get '/' => sub {
-    my $self = shift;
-    
-    $self->getquote('random');
-    $self->render('quote');
-};
-
-any '/init' => sub {
-    shift->dbinit();
-};
-
-get '/add' => sub {
-    my $self = shift;
-
-    $self->render('add');
-};
-
-post '/add' => sub {
-    my $self  = shift;
-    my $quote = $self->param('quote');
-
-    $self->addquote($quote);
-    $self->render('quote');
-};
-
-get '/edit/:id' => sub {
-    my $self  = shift;
-    my $id    = $self->param('id');
-
-    $self->getquote($id);
-    $self->render('edit');
-};
-
-post '/edit/:id' => sub {
-    my $self = shift;
-    my $id   = $self->param('id');
-    my $text = $self->param('quote');
-
-    $self->editquote($id, $text);
-    $self->render('edit');
-};
-
-get '/list' => sub {
-    my $self = shift;
-
-    $self->render('list');
-};
-
-post '/search' => sub {
-    my $self   = shift;
-    my $search = $self->param('search');
-
-    my $id = $self->search($search);
-
-    $self->getquote($id);
-    $self->render('quote');
-};
-
-get '/voteup/:id' => sub {
-    my $self = shift;
-    my $id   = $self->param('id');
-
-    $self->vote($id, 1);
-    $self->render('quote');
-};
-
-get '/votedn/:id' => sub {
-    my $self = shift;
-    my $id   = $self->param('id');
-
-    $self->vote($id, -1);
-    $self->render('quote');
-};
-
-get '/del/:id' => sub {
-    my $self = shift;
-    my $id   = $self->param('id');
-
-    $self->getquote($id);
-    $self->render('del');
-};
-
-get '/approve/:id' => sub {
-    my $self = shift;
-    my $id   = $self->param('id');
-
-    $self->getquote($id);
-    $self->render('approve');
-};
-
-get '/:id' => sub {
-    my $self = shift;
-    my $id   = $self->param('id');
-
-    $self->getquote($id);
-    $self->render('quote');
-};
-
-under sub {
-    my $self = shift;
-    my $pass = $self->param('pass');
-
-    return 1 if $pass eq app->config()->{password};
-
-    $self->render(text => 'Access denied');
-    return undef;
-};
-
-post '/del/:id' => sub {
-    my $self = shift;
-    my $id   = $self->param('id');
-
-    $self->delquote($id);
-    $self->render('deleted');
-};
-
-post '/approve/:id' => sub {
-    my $self = shift;
-    my $id   = $self->param('id');
-
-    $self->approvequote($id);
-    $self->render('approved');
-};
 
 app->secret(app->config()->{secrets});
 app->start();
 
 __DATA__
 
-@@ approve.html.ep
+@@ login.html.ep
 % layout 'base';
-% title "Approve quote $id";
-%= form_for url_for("/approve/$id") => (method => 'post') => begin
-  Confirm with password:
+% title 'Admin login';
+% my $logindiv = 'loginformdiv';
+% $logindiv = 'loginsuccessfuldiv' if session 'admin';
+%= include "$logindiv"
+
+
+@@ loginformdiv.html.ep
+%= if (defined $error) { include 'loginerrordiv' }
+<div class="form">
+%= form_for url_for("/admin") => (method => 'post') => begin
+  Login using admin password:
   %= text_field 'pass'
-  %= submit_button 'Confirm'
+  %= submit_button 'Login'
 %= end
-%= include 'quotediv'
+</div>
+
+
+@@ loginsuccessfuldiv.html.ep
+<div class="success">Logged in</div>
+
+
+@@ loginerrordiv.html.ep
+<div class="error">
+  Error: <%= $error =>
+</div>
+
 
 @@ approved.html.ep
 % layout 'base';
 % title 'Quote approved!';
 Quote approved:
-%= include 'quotediv'
-
-
-@@ del.html.ep
-% layout 'base';
-% title "Really delete quote $id?";
-Do you really want to delete this quote?
-<br />
-%= form_for url_for("/del/$id") => (method => 'post') => begin
-  Confirm with password:
-  %= text_field 'pass'
-  %= submit_button 'Confirm'
-%= end
 %= include 'quotediv'
 
 
@@ -341,21 +289,34 @@ DELETED <%= $id =%>: <%= $quote =%>
 
 @@ quotediv.html.ep
 %= tag div => (class => 'quote') => (id => $id) => begin
-  %= tag div => (class => 'control') => begin
-    %= link_to Edit => url_for("/edit/$id");
-    |
-    %= link_to Del  => url_for("/del/$id");
-  %= end
+  %= if (session 'admin') {
+      %= tag div => (class => 'control') => begin
+        %= link_to Approve => url_for("/$id/approve");
+        |
+        %= link_to Edit => url_for("/$id/edit");
+        |
+        %= link_to Del  => url_for("/$id/del");
+      %= end
+  %= }
   %= link_to "#$id" => url_for("/$id");
   (
   %= $vote
-  %= link_to '+' => url_for("/voteup/$id") => (class => 'vote')
+  %= link_to '+' => url_for("/$id/voteup") => (class => 'vote')
   /
-  %= link_to '-' => url_for("/votedn/$id") => (class => 'vote')
+  %= link_to '-' => url_for("/$id/votedn") => (class => 'vote')
   )
   <br />
   %== $self->quotetohtml
 %= end
+
+
+@@ waiting.html.ep
+% layout 'base';
+% title 'Waiting approval';
+% foreach my $id ($self->getids(0)) {
+  % $self->getquote($id);
+  %= include 'quotediv'
+% }
 
 
 @@ list.html.ep
@@ -370,7 +331,6 @@ DELETED <%= $id =%>: <%= $quote =%>
 % foreach my $id ($self->getids()) {
 % $self->getquote($id);
 <%= include 'quote' %>
-
 % }
 
 @@ list.json.ep
@@ -416,6 +376,10 @@ Add a new quote:
     %= link_to List => url_for('/list')
     |
     %= link_to Add  => url_for('/add')
+    %= if (session 'admin') {
+    |
+    %= link_to 'Waiting approval' => url_for('/waiting')
+    %= }
     %= end
     %= form_for url_for('/search') => (method => 'post') => (class => 'search') => begin
     %= text_field 'search'

@@ -113,6 +113,20 @@ helper login => sub {
     }
 };
 
+helper logout => sub {
+    my $self = shift;
+    $self->session()->{'admin'} = 0;
+    $self->declare('error');
+};
+
+helper declare => sub {
+    my $self  = shift;
+    my $param = shift;
+    $self->stash($param, undef) if defined $param;
+
+    return $self;
+};
+
 helper checklogin => sub {
     my $self = shift;
 
@@ -150,6 +164,10 @@ helper approvequote => sub {
     $self->loadquote($id);
 };
 
+helper go_back => sub {
+    my $self = shift;
+    $self->redirect_to($self->req->headers->referrer() // $self->url_for('/list'));
+};
 
 
 
@@ -163,14 +181,17 @@ helper getquote => sub {
         $id = $ids[rand @ids] // 0;
     }
 
-    my $ref = $self->query_row('SELECT * FROM quotes WHERE id = ?', $id)
-        // { id => 0, text => 'No quote found', vote => 0 };
+    my $ref = { id => 0, text => 'No quote found', vote => 0 };
+    if ($id != 0) {
+        $ref = $self->query_row('SELECT * FROM quotes WHERE id = ?', $id) // $ref;
+    }
 
     chomp $ref->{text};
     $ref->{text} =~ s!\r!!g;
-    $self->stash(id    => $ref->{id});
-    $self->stash(quote => $ref->{text});
-    $self->stash(vote  => $ref->{vote});
+    $self->stash(id       => $ref->{id});
+    $self->stash(quote    => $ref->{text});
+    $self->stash(vote     => $ref->{vote});
+    $self->stash(approved => $ref->{'approved'});
     return $ref;
 };
 
@@ -179,6 +200,7 @@ helper getids => sub {
     my $approved = shift // 1;
 
     my $ref = $self->query_all('SELECT id FROM quotes WHERE approved = ?', $approved) // [ [ 0 ] ];
+    $ref = [ [ 0 ] ] unless (@{$ref});
 
     return map { $_->[0] } @{$ref};
 };
@@ -240,7 +262,7 @@ __DATA__
 
 
 @@ loginformdiv.html.ep
-%= if (defined $error) { include 'loginerrordiv' }
+% if (defined $error) { include 'loginerrordiv' }
 <div class="form">
 %= form_for url_for("/admin") => (method => 'post') => begin
   Login using admin username:
@@ -299,21 +321,23 @@ DELETED <%= $id =%>: <%= $quote =%>
 
 @@ quotediv.html.ep
 %= tag div => (class => 'quote') => (id => $id) => begin
-  %= if (session 'admin') {
+  % if (session 'admin') {
       %= tag div => (class => 'control') => begin
-        %= link_to Approve => url_for("/$id/approve");
+        % if (not $approved) {
+        %= link_to Approve => url_for("/quote/$id/approve");
         |
-        %= link_to Edit => url_for("/$id/edit");
+        % }
+        %= link_to Edit => url_for("/quote/$id/edit");
         |
-        %= link_to Del  => url_for("/$id/del");
+        %= link_to Del  => url_for("/quote/$id/delete");
       %= end
-  %= }
-  %= link_to "#$id" => url_for("/$id");
+  % }
+  %= link_to "#$id" => url_for("/quote/$id");
   (
   %= $vote
-  %= link_to '+' => url_for("/$id/voteup") => (class => 'vote')
+  %= link_to '+' => url_for("/quote/$id/voteup") => (class => 'vote')
   /
-  %= link_to '-' => url_for("/$id/votedn") => (class => 'vote')
+  %= link_to '-' => url_for("/quote/$id/votedn") => (class => 'vote')
   )
   <br />
   %== $self->quotetohtml
@@ -367,7 +391,7 @@ Add a new quote:
 % layout 'base';
 % title "Edit quote $id";
 %= include 'quotediv'
-%= form_for url_for("/edit/$id") => (method => 'post') => (class => 'edit') => begin
+%= form_for url_for("/quote/$id/edit") => (method => 'post') => (class => 'edit') => begin
 %= text_area 'quote' => $quote
 <br />
 %= submit_button 'Edit!'
@@ -378,7 +402,7 @@ Add a new quote:
 <!DOCTYPE html>
 <html xmlns="http://www.w3.org/1999/xhtml">
   <head>
-      <title><%= title %> - #mylittlepony quotes</title>
+      <title><%= title %> - <%= app->config()->{title} %></title>
       %= stylesheet '/res/style.css'
   </head>
   <body>
@@ -386,10 +410,15 @@ Add a new quote:
     %= link_to List => url_for('/list')
     |
     %= link_to Add  => url_for('/add')
-    %= if (session 'admin') {
     |
+    % if (session 'admin') {
     %= link_to 'Waiting approval' => url_for('/waiting')
-    %= }
+    |
+    %= link_to 'Logout' => url_for('/logout')
+    % }
+    % else {
+    %= link_to 'Login' => url_for('/admin')
+    % }
     %= end
     %= form_for url_for('/search') => (method => 'post') => (class => 'search') => begin
     %= text_field 'search'

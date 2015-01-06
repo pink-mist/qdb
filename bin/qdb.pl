@@ -18,24 +18,25 @@ get '/init'         => sub { shift->dbinit();                             };
 
 under sub { shift->session(expiration => 604_800); }; #1 week
 
-get  '/'            => sub { shift->loadquote('random')->render('quote'); };
-get  '/:id'         => sub { shift->loadquote()->render('quote');         };
-get  '/:id/voteup'  => sub { shift->vote(1)->render('quote');             };
-get  '/:id/votedn'  => sub { shift->vote(-1)->render('quote');            };
-get  '/list'        => sub { shift->render('list');                       };
-get  '/add'         => sub { shift->render('add');                        };
-post '/add'         => sub { shift->addquote()->render('quote');          };
-post '/search'      => sub { shift->searchquote()->render('quote');       };
-get  '/admin'       => sub { shift->render('login');                      };
-post '/admin'       => sub { shift->login()->render('login');             };
+get  '/'                  => sub { shift->loadquote('random')->render('quote'); };
+get  '/quote/:id'         => sub { shift->loadquote()->render('quote');         };
+get  '/quote/:id/voteup'  => sub { shift->vote(1)->render('quote');             };
+get  '/quote/:id/votedn'  => sub { shift->vote(-1)->render('quote');            };
+get  '/list'              => sub { shift->render('list');                       };
+get  '/add'               => sub { shift->render('add');                        };
+post '/add'               => sub { shift->addquote()->render('quote');          };
+post '/search'            => sub { shift->searchquote()->render('quote');       };
+get  '/admin'             => sub { shift->declare('error')->render('login');    };
+post '/admin'             => sub { shift->login()->render('login');             };
 
 under sub { shift->checklogin() and return 1; return undef; };
 
-get  '/waiting'     => sub { shift->render('waiting');                    };
-get  '/:id/edit'    => sub { shift->loadquote()->render('edit');          };
-post '/:id/edit'    => sub { shift->editquote()->render('quote');         };
-get  '/:id/approve' => sub { shift->approvequote()->render('approved');   };
-get  '/:id/delete'  => sub { shift->deletequote()->render('deleted');     };
+get  '/waiting'           => sub { shift->render('waiting');                    };
+get  '/quote/:id/edit'    => sub { shift->loadquote()->render('edit');          };
+post '/quote/:id/edit'    => sub { shift->editquote()->render('quote');         };
+get  '/quote/:id/approve' => sub { shift->approvequote()->go_back()             };
+get  '/quote/:id/delete'  => sub { shift->deletequote()->go_back()              };
+get  '/logout'            => sub { shift->logout()->render('login');            };
 
 
 ## Helper section
@@ -98,6 +99,7 @@ helper login => sub {
     my $self  = shift;
     my $pass  = $self->param('pass');
     my $admin = $self->param('admin');
+    $self->declare('error');
 
     if (
             defined $admin
@@ -111,6 +113,8 @@ helper login => sub {
         $self->session()->{'admin'} = 0;
         if (defined $pass) { $self->stash(error => 'Wrong username or password'); }
     }
+
+    return $self;
 };
 
 helper logout => sub {

@@ -14,8 +14,6 @@ plugin 'Database', app->config()->{database}; #configuration in qdb.conf file
 
 
 ## Route section
-get '/init'         => sub { shift->dbinit();                             };
-
 under sub { shift->session(expiration => 604_800); }; #1 week
 
 get  '/'                  => sub { shift->loadquote('random')->render('quote'); };
@@ -38,20 +36,7 @@ get  '/quote/:id/approve' => sub { shift->approvequote()->go_back()             
 get  '/quote/:id/delete'  => sub { shift->deletequote()->go_back()              };
 get  '/logout'            => sub { shift->logout()->render('login');            };
 
-
 ## Helper section
-helper dbinit => sub {
-    my $self = shift;
-
-    $self->db->do('CREATE TABLE IF NOT EXISTS quotes (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        text TEXT,
-        vote INTEGER DEFAULT 0,
-        approved BOOLEAN DEFAULT 0)')
-    and return $self->render(text => 'DB Initialized.');
-    $self->render(text => 'DB Failed to initialize.');
-};
-
 helper loadquote => sub {
     my $self = shift;
     my $id   = shift // $self->param('id');
@@ -251,6 +236,13 @@ helper quotetohtml => sub {
     return $quote;
 };
 
+app->db->do(
+'CREATE TABLE IF NOT EXISTS quotes (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        text TEXT,
+        vote INTEGER DEFAULT 0,
+        approved BOOLEAN DEFAULT 0
+)');
 
 app->secrets(app->config()->{secrets});
 app->start();

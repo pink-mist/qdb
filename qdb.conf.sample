@@ -6,6 +6,7 @@
     },
 
     # CHANGE THESE
+    title   => 'Some random quote database...',
     secrets => [ 'quote db...' ],
     admins  => {
             admin1 => 'password',

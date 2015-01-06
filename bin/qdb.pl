@@ -93,15 +93,21 @@ helper searchquote => sub {
 };
 
 helper login => sub {
-    my $self = shift;
-    my $pass = $self->param('pass');
+    my $self  = shift;
+    my $pass  = $self->param('pass');
+    my $admin = $self->param('admin');
 
-    if (defined $pass and $pass eq app->config()->{'password'}) {
+    if (
+            defined $admin
+        and defined $pass
+        and defined app->config()->{admins}
+        and defined app->config()->{admins}->{$admin}
+        and         app->config()->{admins}->{$admin} eq $pass) {
         $self->session()->{'admin'} = 1;
     }
     else {
         $self->session()->{'admin'} = 0;
-        if (defined $pass) { $self->stash(error => 'Wrong password'); }
+        if (defined $pass) { $self->stash(error => 'Wrong username or password'); }
     }
 };
 
@@ -235,7 +241,9 @@ __DATA__
 %= if (defined $error) { include 'loginerrordiv' }
 <div class="form">
 %= form_for url_for("/admin") => (method => 'post') => begin
-  Login using admin password:
+  Login using admin username:
+  %= text_field 'admin'
+  And password:
   %= text_field 'pass'
   %= submit_button 'Login'
 %= end

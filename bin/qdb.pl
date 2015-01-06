@@ -10,7 +10,7 @@ use Regexp::Common qw/ URI /;
 
 plugin 'Config';
 
-plugin 'Database'; #configuration in qdb.conf file
+plugin 'Database', app->config()->{database}; #configuration in qdb.conf file
 
 
 ## Route section

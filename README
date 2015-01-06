@@ -1,0 +1,76 @@
+qdb.pl by suppy
+
+This is a quote database script written in perl
+
+
+Prerequisites
+=============
+
+To use this quote database, you will need:
+  * SQLite
+  * perl 5.10.1 or higher
+  * Mojolicious
+  * Mojolicious::Plugin::Database
+  * Regexp::Common
+
+If you've got sqlite and perl, you can install the other prerequisites by:
+
+   sudo cpan Mojolicious::Plugin::Database
+                        # ^ this will pull in Mojolicious as well
+   sudo cpan Regexp::Common
+
+
+Configuration
+=============
+
+There is a qdb.conf.sample file included, which you can copy or move to
+qdb.conf, and edit to your likings.
+
+   cp qdb.conf.sample qdb.conf
+   vim qdb.conf
+
+The hypnotoad settings are for which address(es) to bind the listening socket
+to, and under which username/group to run. It's important that the user you
+specify has read/write access to the directory where the qdb.db (see later)
+will be located. If you intend to listen on port 80 (or any other port below
+1024) you'll need to start it under a privileged account. It will switch to the
+specified user after it has opened the port(s) it needs.
+
+The title setting is for setting the main title of the qdb website.
+
+The secrets setting is an array of "secrets" that will be used to encrypt the
+cookies Mojolicious sends; if this is a guessable string, someone can
+impersonate an admin without much difficulty. So make sure it's difficult to
+guess. This is not something you will need to remember either, so random crap
+is fine.
+
+And lastly there's an admins hash, where each key is an admin username,
+and each value is a password. You can add as many of these as you want, but
+you need at least one. Otherwise you'll be unable to edit/delete/approve any
+quotes.
+
+By default, the database will be stored in a SQLite database file named qdb.db
+in the current directory. You can change this by editing the dsn setting in the
+database hash in the configuration file.
+
+
+Running the qdb
+===============
+
+Mojolicious comes with the hypnotoad webserver, which you'll run by just doing:
+
+   sudo hypnotoad qdb.pl
+
+in the directory you extracted the qdb script to.
+
+If you ever need to update the script, you can just rerun the hypnotoad
+command; it will kill the old script gracefully with 0 downtime, and replace it
+with the current version.
+
+
+Not using hypnotoad
+===================
+
+Mojolicious is easy to get going as a normal CGI script, or using FastCGI, or
+even under mod_perl, but it will be most efficient to run it under hypnotoad.
+Therefore, other solutions will be up to the user to figure out.

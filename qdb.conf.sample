@@ -1,15 +1,24 @@
 {
-    database => {
-        dsn     => 'dbi:SQLite:dbname=qdb.db',
-        options => { sqlite_unicode => 1, AutoCommit => 1, RaiseError => 1, },
-        helper  => 'db'
+    # CHANGE THESE
+    hypnotoad => {
+        listen => [ 'http://127.0.0.1:80/', 'http://[::1]:80/', ],
+        user   => qdb,
+        group  => users,
     },
 
-    # CHANGE THESE
     title   => 'Some random quote database...',
     secrets => [ 'quote db...' ],
     admins  => {
             admin1 => 'password',
             admin2 => 'some other pass',
+    },
+
+
+
+    # No need to change these unless you want to...
+    database => {
+        dsn     => 'dbi:SQLite:dbname=qdb.db',
+        options => { sqlite_unicode => 1, AutoCommit => 1, RaiseError => 1, },
+        helper  => 'db'
     },
 }

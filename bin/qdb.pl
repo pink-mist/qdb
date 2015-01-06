@@ -226,7 +226,7 @@ helper quotetohtml => sub {
 };
 
 
-app->secret(app->config()->{secrets});
+app->secrets(app->config()->{secrets});
 app->start();
 
 __DATA__

@@ -3,6 +3,8 @@
 use strict;
 use warnings;
 
+use 5.010.001;
+
 use Mojolicious::Lite;
 use Regexp::Common qw/ URI /;
 

@@ -325,26 +325,29 @@ DELETED <%= $id =%>: <%= $quote =%>
 
 @@ quotediv.html.ep
 %= tag div => (class => 'quote') => (id => $id) => begin
-  % if (session 'admin') {
-      %= tag div => (class => 'control') => begin
-        % if (not $approved) {
-        %= link_to Approve => url_for("/quote/$id/approve");
-        |
-        % }
-        %= link_to Edit => url_for("/quote/$id/edit");
-        |
-        %= link_to Del  => url_for("/quote/$id/delete");
-      %= end
-  % }
-  %= link_to "#$id" => url_for("/quote/$id");
-  (
-  %= $vote
-  %= link_to '+' => url_for("/quote/$id/voteup") => (class => 'vote')
-  /
-  %= link_to '-' => url_for("/quote/$id/votedn") => (class => 'vote')
-  )
-  <br />
+  %= tag div => (class => 'controls') => begin
+      % if (session 'admin') {
+          %= tag div => (class => 'control') => begin
+            % if (not $approved) {
+            %= link_to Approve => url_for("/quote/$id/approve");
+            |
+            % }
+            %= link_to Edit => url_for("/quote/$id/edit");
+            |
+            %= link_to Del  => url_for("/quote/$id/delete");
+          %= end
+      % }
+      %= link_to "#$id" => url_for("/quote/$id");
+      (
+      %= $vote
+      %= link_to '+' => url_for("/quote/$id/voteup") => (class => 'vote')
+      /
+      %= link_to '-' => url_for("/quote/$id/votedn") => (class => 'vote')
+      )
+  %= end
+  %= tag div => (class => 'text') => begin
   %== $self->quotetohtml
+  %= end
 %= end
 
 

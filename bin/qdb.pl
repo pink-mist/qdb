@@ -7,6 +7,7 @@ use 5.010.001;
 
 use Mojolicious::Lite;
 use Regexp::Common qw/ URI /;
+use POSIX qw/ ceil /;
 
 plugin 'Config';
 
@@ -16,25 +17,27 @@ plugin 'Database', app->config()->{database}; #configuration in qdb.conf file
 ## Route section
 under sub { shift->session(expiration => 604_800); }; #1 week
 
-get  '/'                  => sub { shift->loadquote('random')->render('quote'); };
-get  '/quote/:id'         => sub { shift->loadquote()->render('quote');         };
-get  '/quote/:id/voteup'  => sub { shift->vote(1)->render('quote');             };
-get  '/quote/:id/votedn'  => sub { shift->vote(-1)->render('quote');            };
-get  '/list'              => sub { shift->render('list');                       };
-get  '/add'               => sub { shift->render('add');                        };
-post '/add'               => sub { shift->addquote()->render('quote');          };
-post '/search'            => sub { shift->searchquote()->render('list');        };
-get  '/admin'             => sub { shift->declare('error')->render('login');    };
-post '/admin'             => sub { shift->login()->render('login');             };
+get  '/'                  => sub { shift->loadquote('random')->render('quote');                            };
+get  '/quote/:id'         => sub { shift->loadquote()->render('quote');                                    };
+get  '/quote/:id/voteup'  => sub { shift->vote(1)->render('quote');                                        };
+get  '/quote/:id/votedn'  => sub { shift->vote(-1)->render('quote');                                       };
+get  '/list'              => sub { shift->get_page(1)->stash(pagebase => '/list')->render('list');         };
+get  '/list/:page'        => sub { shift->get_page()->stash(pagebase => '/list')->render('list');          };
+get  '/add'               => sub { shift->render('add');                                                   };
+post '/add'               => sub { shift->addquote()->render('quote');                                     };
+post '/search'            => sub { shift->searchquote()->stash(pagebase => '/search')->render('list');     };
+get  '/search/:page'      => sub { shift->get_search_page()->stash(pagebase => '/search')->render('list'); };
+get  '/admin'             => sub { shift->declare('error')->render('login');                               };
+post '/admin'             => sub { shift->login()->render('login');                                        };
 
 under sub { shift->checklogin() and return 1; return undef; };
 
-get  '/waiting'           => sub { shift->render('waiting');                    };
-get  '/quote/:id/edit'    => sub { shift->loadquote()->render('edit');          };
-post '/quote/:id/edit'    => sub { shift->editquote()->render('quote');         };
-get  '/quote/:id/approve' => sub { shift->approvequote()->go_back()             };
-get  '/quote/:id/delete'  => sub { shift->deletequote()->go_back()              };
-get  '/logout'            => sub { shift->logout()->render('login');            };
+get  '/waiting'           => sub { shift->render('waiting');                                               };
+get  '/quote/:id/edit'    => sub { shift->loadquote()->render('edit');                                     };
+post '/quote/:id/edit'    => sub { shift->editquote()->render('quote');                                    };
+get  '/quote/:id/approve' => sub { shift->approvequote()->go_back()                                        };
+get  '/quote/:id/delete'  => sub { shift->deletequote()->go_back()                                         };
+get  '/logout'            => sub { shift->logout()->render('login');                                       };
 
 ## Helper section
 helper loadquote => sub {
@@ -77,7 +80,10 @@ helper searchquote => sub {
     my @ids  = map { $_->[0] } @{$ref};
     @ids = (0) unless @ids;
     $self->stash(results => [@ids]);
-    return $self;
+    $self->flash(results => [@ids]);
+    warn "Flashing: @ids";
+
+    return $self->get_page(1);
 };
 
 helper login => sub {
@@ -199,6 +205,36 @@ helper query_row => sub {
     return undef;
 };
 
+helper get_page => sub {
+    my $self = shift;
+    my $page = $self->param('page') // $_[0] // 1;
+
+    my $res_per_page = 50;
+    my @ids   = $self->results() ? $self->results() : $self->getids();
+    my $pages = ceil( @ids / $res_per_page );
+    my $start = ($page - 1) * $res_per_page;
+    my $end   = $page * $res_per_page - 1;
+    my @res   = grep { defined } @ids[$start .. $end];
+       @res   = (0) unless @res;
+
+    $self->stash(results => [ @res ]);
+    $self->stash(pages   => $pages) if $pages > 1;
+    $self->stash(page    => $page)  if $pages > 1;
+
+    return $self;
+};
+
+helper get_search_page => sub {
+    my $self = shift;
+    my @ids  = @{ $self->flash('results') // [ 0 ] };
+
+    $self->flash(results => [ @ids ]);
+    warn "Flashing search: @ids";
+    $self->stash(results => [ @ids ]);
+
+    return $self->get_page();
+};
+
 helper query => sub {
     my $self = shift;
     my ($sql, @args) = @_;
@@ -225,6 +261,12 @@ helper quotetohtml => sub {
 
 helper go_back => sub {
     my $self = shift;
+
+    my $results = $self->flash('results');
+    $self->flash(results => $results) if defined $results;
+    warn "Flashing back: @{ $results }" if defined $results;
+    warn "Not flashing back!" if not defined $results;
+
     $self->redirect_to($self->req->headers->referrer() // $self->url_for('/list'));
 };
 
@@ -242,6 +284,15 @@ helper results => sub {
 
     return defined $res if not wantarray;
     return @{ $res // [] };
+};
+
+helper make_link => sub {
+    my $self = shift;
+    my $num  = shift;
+    my $name = shift // $num;
+    my $base = $self->stash('pagebase');
+
+    return sprintf '<a href="%s">%s</a>', $self->url_for("$base/$num"), $name;
 };
 
 app->db->do(
@@ -351,6 +402,41 @@ DELETED <%= $id =%>: <%= $quote =%>
 %= end
 
 
+@@ pager.html.ep
+%= tag div => (class => 'pager') => begin
+  %= include 'prev-link'
+  %= include 'page-list'
+  %= include 'next-link'
+%= end
+
+
+@@ prev-link.html.ep
+% if ( $page == 1 ) {
+  &lt;&lt; Prev
+% }
+% else {
+  %== make_link($page-1, '<< Prev')
+% }
+
+
+@@ next-link.html.ep
+% if ( $page == $pages ) {
+  Next &gt;&gt;
+% }
+% else {
+  %== make_link($page+1, 'Next >>')
+% }
+
+@@ page-list.html.ep
+% foreach my $link ( 1 .. $pages ) {
+  % if ( $link == $page ) {
+    %= $link
+  % }
+  % else {
+    %== make_link($link)
+  % }
+% }
+
 @@ waiting.html.ep
 % layout 'base';
 % title 'Waiting approval';
@@ -367,6 +453,9 @@ DELETED <%= $id =%>: <%= $quote =%>
 % foreach my $id (@list) {
   % $self->getquote($id);
   %= include 'quotediv'
+% }
+% if (defined stash 'pages') {
+  %= include 'pager'
 % }
 
 @@ list.txt.ep

@@ -1,6 +1,8 @@
 div.quote           { border: 1px solid black; margin-top: 1em; }
 div.nav             { float: left; width: 50%; text-align: right; }
 div.control         { float: right; }
+div.pager           { text-align: center; margin-top: 1em; }
+form.vote           { display: inline; }
 form.search         { text-align: right; }
 form.add, form.edit { text-align: center; }
 form.add textarea,

@@ -23,7 +23,7 @@ get  '/quote/:id/votedn'  => sub { shift->vote(-1)->render('quote');            
 get  '/list'              => sub { shift->render('list');                       };
 get  '/add'               => sub { shift->render('add');                        };
 post '/add'               => sub { shift->addquote()->render('quote');          };
-post '/search'            => sub { shift->searchquote()->render('quote');       };
+post '/search'            => sub { shift->searchquote()->render('list');        };
 get  '/admin'             => sub { shift->declare('error')->render('login');    };
 post '/admin'             => sub { shift->login()->render('login');             };
 
@@ -75,9 +75,9 @@ helper searchquote => sub {
     my $ref  = $self->query_all('SELECT id FROM quotes WHERE text LIKE ? AND approved = 1', $text) // [];
 
     my @ids  = map { $_->[0] } @{$ref};
-    my $id   = $ids[rand @ids] // 0;
-
-    $self->loadquote($id);
+    @ids = (0) unless @ids;
+    $self->stash(results => [@ids]);
+    return $self;
 };
 
 helper login => sub {
@@ -236,6 +236,14 @@ helper declare => sub {
     return $self;
 };
 
+helper results => sub {
+    my $self = shift;
+    my $res = $self->stash('results');
+
+    return defined $res if not wantarray;
+    return @{ $res // [] };
+};
+
 app->db->do(
 'CREATE TABLE IF NOT EXISTS quotes (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -352,7 +360,8 @@ DELETED <%= $id =%>: <%= $quote =%>
 @@ list.html.ep
 % layout 'base';
 % title 'List';
-% foreach my $id ($self->getids()) {
+% my @list = $self->results() ? $self->results() : $self->getids();
+% foreach my $id (@list) {
   % $self->getquote($id);
   %= include 'quotediv'
 % }

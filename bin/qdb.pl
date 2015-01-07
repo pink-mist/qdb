@@ -108,14 +108,6 @@ helper logout => sub {
     $self->declare('error');
 };
 
-helper declare => sub {
-    my $self  = shift;
-    my $param = shift;
-    $self->stash($param, undef) if defined $param;
-
-    return $self;
-};
-
 helper checklogin => sub {
     my $self = shift;
 
@@ -151,11 +143,6 @@ helper approvequote => sub {
 
     $self->query('UPDATE quotes SET approved = 1 WHERE id = ?', $id);
     $self->loadquote($id);
-};
-
-helper go_back => sub {
-    my $self = shift;
-    $self->redirect_to($self->req->headers->referrer() // $self->url_for('/list'));
 };
 
 
@@ -234,6 +221,19 @@ helper quotetohtml => sub {
     $quote =~ s!($RE{URI}{HTTP}{-scheme=>'https?'})!<a href="$1">$1</a>!g;
 
     return $quote;
+};
+
+helper go_back => sub {
+    my $self = shift;
+    $self->redirect_to($self->req->headers->referrer() // $self->url_for('/list'));
+};
+
+helper declare => sub {
+    my $self  = shift;
+    my $param = shift;
+    $self->stash($param, undef) if defined $param;
+
+    return $self;
 };
 
 app->db->do(

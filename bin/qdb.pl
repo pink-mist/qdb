@@ -19,8 +19,7 @@ under sub { shift->session(expiration => 604_800); }; #1 week
 
 get  '/'                  => sub { shift->loadquote('random')->render('quote');                            };
 get  '/quote/:id'         => sub { shift->loadquote()->render('quote');                                    };
-get  '/quote/:id/voteup'  => sub { shift->vote(1)->render('quote');                                        };
-get  '/quote/:id/votedn'  => sub { shift->vote(-1)->render('quote');                                       };
+post '/quote/:id'         => sub { shift->loadquote()->vote()->render('quote');                            };
 get  '/list'              => sub { shift->get_page(1)->stash(pagebase => '/list')->render('list');         };
 get  '/list/:page'        => sub { shift->get_page()->stash(pagebase => '/list')->render('list');          };
 get  '/add'               => sub { shift->render('add');                                                   };
@@ -51,7 +50,7 @@ helper loadquote => sub {
 helper vote => sub {
     my $self = shift;
     my $id   = $self->param('id');
-    my $vote = shift;
+    my $vote = $self->param('vote'); $self->clamp($vote, -1, 1);
 
     my $ref = $self->getquote($id);
     $self->query('UPDATE quotes SET vote = ? WHERE id = ?', $ref->{'vote'} + $vote, $id);
@@ -295,6 +294,18 @@ helper make_link => sub {
     return sprintf '<a href="%s">%s</a>', $self->url_for("$base/$num"), $name;
 };
 
+helper clamp => sub {
+    my $self = shift;
+    my ($val, $min, $max) = @_;
+
+    $val = $max if $val > $max;
+    $val = $min if $val < $min;
+
+    $_[0] = $val;
+
+    return $self;
+};
+
 app->db->do(
 'CREATE TABLE IF NOT EXISTS quotes (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -391,9 +402,14 @@ DELETED <%= $id =%>: <%= $quote =%>
       %= link_to "#$id" => url_for("/quote/$id");
       (
       %= $vote
-      %= link_to '+' => url_for("/quote/$id/voteup") => (class => 'vote')
+
+      %= form_for url_for("/quote/$id") => (method => 'post') => ( id => "vote-form-$id" ) => (class => 'vote') => begin
+      %= hidden_field 'vote'
+      %= link_to '+' => "javascript:vote('vote-form-$id', '1')" => (class => 'vote')
       /
-      %= link_to '-' => url_for("/quote/$id/votedn") => (class => 'vote')
+      %= link_to '-' => "javascript:vote('vote-form-$id', '-1')" => (class => 'vote')
+      %= end
+
       )
   %= end
   %= tag div => (class => 'text') => begin
@@ -501,6 +517,13 @@ Add a new quote:
   <head>
       <title><%= title %> - <%= app->config()->{title} %></title>
       %= stylesheet '/res/style.css'
+      <script language="JavaScript" type="text/javascript">
+        function vote ( id, vote ) {
+            var form = document.getElementById( id );
+            form.vote.value = vote;
+            form.submit();
+        }
+      </script>
   </head>
   <body>
     %= tag div => (class => 'nav') => begin

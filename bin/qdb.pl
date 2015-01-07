@@ -272,7 +272,7 @@ __DATA__
   Login using admin username:
   %= text_field 'admin'
   And password:
-  %= text_field 'pass'
+  %= password_field 'pass'
   %= submit_button 'Login'
 %= end
 </div>

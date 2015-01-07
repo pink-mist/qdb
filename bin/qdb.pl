@@ -17,9 +17,10 @@ plugin 'Database', app->config()->{database}; #configuration in qdb.conf file
 ## Route section
 under sub { shift->session(expiration => 604_800); }; #1 week
 
-get  '/'                  => sub { shift->loadquote('random')->render('quote');                                };
+get  '/'                  => sub { shift->latest()->render('list');                                            };
 get  '/quote/:id'         => sub { shift->loadquote()->render('quote');                                        };
 post '/quote/:id'         => sub { shift->loadquote()->vote()->render('quote');                                };
+get  '/random'            => sub { shift->loadquote('random')->render('quote');                                };
 get  '/list'              => sub { shift->get_page(1)->stash(pagebase => '/list')->render('list');             };
 get  '/list/:page'        => sub { shift->get_page( )->stash(pagebase => '/list')->render('list');             };
 get  '/top'               => sub { shift->top()->get_page(1)->stash(pagebase => '/top')->render('list');       };
@@ -256,6 +257,19 @@ helper bottom => sub {
     my @ids  = map { $_->[0] } @{$ref};
 
     $self->stash(results => [@ids]);
+
+    return $self;
+};
+
+helper latest => sub {
+    my $self = shift;
+    my $ref  = $self->query_all('SELECT id FROM quotes WHERE approved = 1 ORDER BY id DESC') // [ [ 0 ] ];
+       $ref  = [ [ 0 ] ] unless (@{$ref});
+    my @ids  = map { $_->[0] } @{$ref};
+    my @res   = grep { defined } @ids[0 .. 4];
+       @res   = (0) unless @res;
+
+    $self->stash(results => [ @res ]);
 
     return $self;
 };
@@ -558,6 +572,8 @@ Add a new quote:
     %= link_to Top => url_for('/top')
     |
     %= link_to Bottom => url_for('/bottom')
+    |
+    %= link_to Random => url_for('/random')
     |
     %= link_to Add  => url_for('/add')
     |

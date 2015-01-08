@@ -349,7 +349,7 @@ helper clamp => sub {
 
 app->db->do(
 'CREATE TABLE IF NOT EXISTS quotes (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        id SERIAL PRIMARY KEY,
         text TEXT,
         vote INTEGER DEFAULT 0,
         approved BOOLEAN DEFAULT 0

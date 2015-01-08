@@ -24,7 +24,7 @@ print "Connecting to Postgresql database\n";
 my $pg         = DBI->connect($pg_dsn, $pg_user, $pg_pass, $pg_options);
 
 print "Recreating quotes table in the Postgresql database\n";
-$pg->do('DROP TABLE quotes');
+$pg->do('DROP TABLE IF EXISTS quotes');
 $pg->do(
 'CREATE TABLE IF NOT EXISTS quotes (                                            
         id SERIAL PRIMARY KEY,                                                  

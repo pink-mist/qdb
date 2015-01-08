@@ -13,6 +13,7 @@ plugin 'Config';
 
 plugin 'Database', app->config()->{database}; #configuration in qdb.conf file
 
+app->secrets(app->config()->{secrets});
 
 ## Route section
 under sub { shift->session(expiration => 604_800); }; #1 week
@@ -354,7 +355,6 @@ app->db->do(
         approved BOOLEAN DEFAULT 0
 )');
 
-app->secrets(app->config()->{secrets});
 app->start();
 
 __DATA__

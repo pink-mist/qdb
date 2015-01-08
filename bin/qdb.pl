@@ -80,7 +80,7 @@ helper searchquote => sub {
     my $text = $self->param('search');
 
     $text    =~ s/^| |$/%/g;
-    my $ref  = $self->query_all('SELECT id FROM quotes WHERE text LIKE ? AND approved = 1', $text) // [];
+    my $ref  = $self->query_all('SELECT id FROM quotes WHERE text LIKE ? AND approved = TRUE', $text) // [];
 
     my @ids  = map { $_->[0] } @{$ref};
     @ids = (0) unless @ids;
@@ -152,7 +152,7 @@ helper approvequote => sub {
     my $self = shift;
     my $id   = $self->param('id');
 
-    $self->query('UPDATE quotes SET approved = 1 WHERE id = ?', $id);
+    $self->query('UPDATE quotes SET approved = TRUE WHERE id = ?', $id);
     $self->loadquote($id);
 };
 
@@ -184,7 +184,7 @@ helper getquote => sub {
 
 helper getids => sub {
     my $self = shift;
-    my $approved = shift // 1;
+    my $approved = shift // 'TRUE';
 
     my $ref = $self->query_all('SELECT id FROM quotes WHERE approved = ?', $approved) // [ [ 0 ] ];
     $ref = [ [ 0 ] ] unless (@{$ref});
@@ -242,7 +242,7 @@ helper get_search_page => sub {
 
 helper top => sub {
     my $self = shift;
-    my $ref  = $self->query_all('SELECT id FROM quotes WHERE approved = 1 ORDER BY vote DESC') // [ [ 0 ] ];
+    my $ref  = $self->query_all('SELECT id FROM quotes WHERE approved = TRUE ORDER BY vote DESC') // [ [ 0 ] ];
        $ref  = [ [ 0 ] ] unless (@{$ref});
     my @ids  = map { $_->[0] } @{$ref};
 
@@ -253,7 +253,7 @@ helper top => sub {
 
 helper bottom => sub {
     my $self = shift;
-    my $ref  = $self->query_all('SELECT id FROM quotes WHERE approved = 1 ORDER BY vote ASC') // [ [ 0 ] ];
+    my $ref  = $self->query_all('SELECT id FROM quotes WHERE approved = TRUE ORDER BY vote ASC') // [ [ 0 ] ];
        $ref  = [ [ 0 ] ] unless (@{$ref});
     my @ids  = map { $_->[0] } @{$ref};
 
@@ -264,7 +264,7 @@ helper bottom => sub {
 
 helper latest => sub {
     my $self = shift;
-    my $ref  = $self->query_all('SELECT id FROM quotes WHERE approved = 1 ORDER BY id DESC') // [ [ 0 ] ];
+    my $ref  = $self->query_all('SELECT id FROM quotes WHERE approved = TRUE ORDER BY id DESC') // [ [ 0 ] ];
        $ref  = [ [ 0 ] ] unless (@{$ref});
     my @ids  = map { $_->[0] } @{$ref};
     my @res   = grep { defined } @ids[0 .. 4];
@@ -496,7 +496,7 @@ DELETED <%= $id =%>: <%= $quote =%>
 @@ waiting.html.ep
 % layout 'base';
 % title 'Waiting approval';
-% foreach my $id ($self->getids(0)) {
+% foreach my $id ($self->getids('FALSE')) {
   % $self->getquote($id);
   %= include 'quotediv'
 % }

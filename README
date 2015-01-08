@@ -74,3 +74,15 @@ Not using hypnotoad
 Mojolicious is easy to get going as a normal CGI script, or using FastCGI, or
 even under mod_perl, but it will be most efficient to run it under hypnotoad.
 Therefore, other solutions will be up to the user to figure out.
+
+
+Troubleshooting
+===============
+
+If something goes wrong, and hypnotoad doesn't tell you anything, try running
+it in the foreground instead:
+
+   sudo hypnotoad -f qdb.pl
+
+in the directory you extracted the qdb script to. This should tell you what
+it's doing, and help seeing where things go wrong.

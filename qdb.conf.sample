@@ -17,8 +17,10 @@
 
     # No need to change these unless you want to...
     database => {
-        dsn     => 'dbi:SQLite:dbname=qdb.db',
-        options => { sqlite_unicode => 1, AutoCommit => 1, RaiseError => 1, },
+        dsn     => 'dbi:Pg:dbname=qdb',
+#        username => 'qdb',
+#        password => 'maybe you need a password for the database',
+        options => { AutoCommit => 1, RaiseError => 1, },
         helper  => 'db'
     },
 }

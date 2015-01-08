@@ -80,7 +80,7 @@ helper searchquote => sub {
     my $text = $self->param('search');
 
     $text    =~ s/^| |$/%/g;
-    my $ref  = $self->query_all('SELECT id FROM quotes WHERE text LIKE ? AND approved = TRUE', $text) // [];
+    my $ref  = $self->query_all('SELECT id FROM quotes WHERE text LIKE ? AND approved = TRUE ORDER BY id ASC', $text) // [];
 
     my @ids  = map { $_->[0] } @{$ref};
     @ids = (0) unless @ids;
@@ -186,7 +186,7 @@ helper getids => sub {
     my $self = shift;
     my $approved = shift // 'TRUE';
 
-    my $ref = $self->query_all('SELECT id FROM quotes WHERE approved = ?', $approved) // [ [ 0 ] ];
+    my $ref = $self->query_all('SELECT id FROM quotes WHERE approved = ? ORDER BY id ASC', $approved) // [ [ 0 ] ];
     $ref = [ [ 0 ] ] unless (@{$ref});
 
     return map { $_->[0] } @{$ref};
@@ -242,7 +242,7 @@ helper get_search_page => sub {
 
 helper top => sub {
     my $self = shift;
-    my $ref  = $self->query_all('SELECT id FROM quotes WHERE approved = TRUE ORDER BY vote DESC') // [ [ 0 ] ];
+    my $ref  = $self->query_all('SELECT id FROM quotes WHERE approved = TRUE ORDER BY vote DESC, id ASC') // [ [ 0 ] ];
        $ref  = [ [ 0 ] ] unless (@{$ref});
     my @ids  = map { $_->[0] } @{$ref};
 
@@ -253,7 +253,7 @@ helper top => sub {
 
 helper bottom => sub {
     my $self = shift;
-    my $ref  = $self->query_all('SELECT id FROM quotes WHERE approved = TRUE ORDER BY vote ASC') // [ [ 0 ] ];
+    my $ref  = $self->query_all('SELECT id FROM quotes WHERE approved = TRUE ORDER BY vote ASC, id ASC') // [ [ 0 ] ];
        $ref  = [ [ 0 ] ] unless (@{$ref});
     my @ids  = map { $_->[0] } @{$ref};
 

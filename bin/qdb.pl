@@ -352,7 +352,7 @@ app->db->do(
         id SERIAL PRIMARY KEY,
         text TEXT,
         vote INTEGER DEFAULT 0,
-        approved BOOLEAN DEFAULT 0
+        approved BOOLEAN DEFAULT FALSE
 )');
 
 app->start();

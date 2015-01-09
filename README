@@ -8,16 +8,24 @@ Prerequisites
 
 To use this quote database, you will need:
   * SQLite
+  * PostgreSQL
   * perl 5.10.1 or higher
   * Mojolicious
   * Mojolicious::Plugin::Database
   * Regexp::Common
+  * DBD::Pg
 
-If you've got sqlite and perl, you can install the other prerequisites by:
+If you've got sqlite, postgresql, and perl, you can install the other
+prerequisites by:
 
    sudo cpan Mojolicious::Plugin::Database
                         # ^ this will pull in Mojolicious as well
    sudo cpan Regexp::Common
+   sudo cpan DBD::Pg
+
+Please note that sqlite is only needed for installing
+Mojolicious::Plugin::Database; it is not needed after that is done (unless you
+need to import an old sqlite database into postgresql).
 
 
 Configuration
@@ -49,9 +57,16 @@ and each value is a password. You can add as many of these as you want, but
 you need at least one. Otherwise you'll be unable to edit/delete/approve any
 quotes.
 
-By default, the database will be stored in a SQLite database file named qdb.db
-in the current directory. You can change this by editing the dsn setting in the
-database hash in the configuration file.
+If you use sudo to load hypnotoad, you will likely need to specify the username
+parameter for the database to use as well, or it will try to use it as root,
+which may not be what you want.
+
+Make sure there is a database created that the script can use:
+
+   createdb -E UTF-8 qdb
+
+If you have another database you want to use, change the dsn in the database
+hash accordingly.
 
 
 Running the qdb
@@ -86,3 +101,26 @@ it in the foreground instead:
 
 in the directory you extracted the qdb script to. This should tell you what
 it's doing, and help seeing where things go wrong.
+
+
+Migrating from SQLite
+=====================
+
+There is an import.pl script included that will use the qdb.conf to connect to
+a PostgreSQL database and read in quotes from an SQLite database into it:
+
+   ./import.pl qdb.db # if your old SQLite database is in qdb.db
+
+It is far from perfect, so manual finetuning may be needed, in particular how
+you update the quotes_id_seq sequence differs between PostgreSQL versions.
+
+
+Tuning PostgreSQL
+=================
+
+You may want to create some indexes for your quotes, particularly one for the
+text column in lowercase:
+
+   CREATE INDEX quotes_lower_text_idx ON quotes (LOWER(text) text_pattern_ops);
+
+For more suggestions, contact your DBA.

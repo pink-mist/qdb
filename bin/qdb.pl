@@ -80,7 +80,7 @@ helper searchquote => sub {
     my $text = $self->param('search');
 
     $text    =~ s/^| |$/%/g;
-    my $ref  = $self->query_all('SELECT id FROM quotes WHERE text LIKE ? AND approved = TRUE ORDER BY id ASC', $text) // [];
+    my $ref  = $self->query_all('SELECT id FROM quotes WHERE LOWER(text) LIKE LOWER(?) AND approved = TRUE ORDER BY id ASC', $text) // [];
 
     my @ids  = map { $_->[0] } @{$ref};
     @ids = (0) unless @ids;

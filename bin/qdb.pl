@@ -567,6 +567,8 @@ Add a new quote:
   </head>
   <body>
     %= tag div => (class => 'nav') => begin
+    %= link_to Latest => url_for('/')
+    |
     %= link_to List => url_for('/list')
     |
     %= link_to Top => url_for('/top')

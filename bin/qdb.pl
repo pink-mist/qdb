@@ -113,7 +113,7 @@ helper addquote => sub {
     $quote    =~ s!\r!!g;
 
     my $id = 0;
-    $id = $self->db->last_insert_id('', '', 'quotes', '') if defined
+    $id = $self->db->dbh->last_insert_id('', '', 'quotes', '') if defined
         $self->query('INSERT INTO quotes (text) VALUES (?)', $quote);
     $self->loadquote($id);
 };

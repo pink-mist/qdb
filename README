@@ -7,21 +7,19 @@ Prerequisites
 =============
 
 To use this quote database, you will need:
-  * SQLite
   * PostgreSQL
   * perl 5.10.1 or higher
   * Mojolicious
-  * Mojolicious::Plugin::Database
+  * Mojo::Pg
   * Regexp::Common
   * DBD::Pg
 
 If you've got sqlite, postgresql, and perl, you can install the other
 prerequisites by:
 
-   sudo cpan Mojolicious::Plugin::Database
-                        # ^ this will pull in Mojolicious as well
+   sudo cpan Mojo::Pg
+                        # ^ this will pull in Mojolicious and DBD::Pg as well
    sudo cpan Regexp::Common
-   sudo cpan DBD::Pg
 
 Please note that sqlite is only needed for installing
 Mojolicious::Plugin::Database; it is not needed after that is done (unless you

@@ -8,10 +8,24 @@ use 5.010.001;
 use Mojolicious::Lite;
 use Regexp::Common qw/ URI /;
 use POSIX qw/ ceil /;
+use Mojo::Pg;
 
 plugin 'Config';
 
-plugin 'Database', app->config()->{database}; #configuration in qdb.conf file
+#plugin 'Database', app->config()->{database}; #configuration in qdb.conf file
+
+my $pg = do {
+    my $dsn     = app->config()->{database}{dsn} // 'dbi:Pg:dbname=qdb';
+    my $user    = app->config()->{database}{username} // '';
+    my $pass    = app->config()->{database}{password} // '';
+    my $options = app->config()->{database}{options};
+
+    Mojo::Pg->new()->
+        dsn($dsn)->
+        options($options)->
+        username($user)->
+        password($pass);
+};
 
 app->secrets(app->config()->{secrets});
 
@@ -45,6 +59,8 @@ get  '/quote/:id/delete'  => sub { shift->deletequote()->go_back()              
 get  '/logout'            => sub { shift->logout()->render('login');                                           };
 
 ## Helper section
+helper db => sub { $pg->db() };
+
 helper loadquote => sub {
     my $self = shift;
     my $id   = shift // $self->param('id');
@@ -279,11 +295,13 @@ helper query => sub {
     my $self = shift;
     my ($sql, @args) = @_;
 
-    my $sth; $sth = $self->db->prepare($sql)
-        and $sth->execute(@args)
-        and return $sth;
+    my $sth = eval {
+        my $res = $self->db->query($sql);
+        $res->sth();
+    };
 
-    return undef;
+    app->log->error("Mojo::Pg had an error: $@") if not defined $sth;
+    return $sth;
 };
 
 helper quotetohtml => sub {

@@ -21,6 +21,5 @@
 #        username => 'qdb',
 #        password => 'maybe you need a password for the database',
         options => { AutoCommit => 1, RaiseError => 1, },
-        helper  => 'db'
     },
 }

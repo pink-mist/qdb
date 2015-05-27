@@ -17,6 +17,21 @@ if (defined(my $usergroup = app->config()->{usergroup})) {
     plugin SetUserGroup => $usergroup;
 }
 
+# Check for captcha configuration
+if (defined(my $captcha = app->config()->{captcha})) {
+    plugin 'Captcha::reCAPTCHA' => $captcha;
+    helper validate => sub {
+       my $self = shift;
+
+       my $params = $self->req->params->to_hash;
+
+       return $self->validate_recaptcha($params);
+    };
+}
+else {
+    helper use_recaptcha => sub { shift->stash(recaptcha_html => '') };
+    helper validate => sub { return 1 };
+}
 
 my $pg = do {
     my $dsn     = app->config()->{database}{dsn} // 'dbi:Pg:dbname=qdb';
@@ -46,12 +61,18 @@ get  '/top'               => sub { shift->top()->get_page(1)->stash(pagebase => 
 get  '/top/:page'         => sub { shift->top()->get_page( )->stash(pagebase => '/top')->render('list');       };
 get  '/bottom'            => sub { shift->bottom()->get_page(1)->stash(pagebase => '/bottom')->render('list'); };
 get  '/bottom/:page'      => sub { shift->bottom()->get_page( )->stash(pagebase => '/bottom')->render('list'); };
-get  '/add'               => sub { shift->render('add');                                                       };
-post '/add'               => sub { shift->addquote()->render('quote');                                         };
 post '/search'            => sub { shift->searchquote()->stash(pagebase => '/search')->render('list');         };
 get  '/search/:page'      => sub { shift->get_search_page()->stash(pagebase => '/search')->render('list');     };
 get  '/admin'             => sub { shift->declare('error')->render('login');                                   };
 post '/admin'             => sub { shift->login()->render('login');                                            };
+
+group {
+    get  '/add'               => sub { shift->use_recaptcha()->render('add');                                                       };
+
+    under sub { shift->validate() and return 1; return undef; }
+
+    post '/add'               => sub { shift->addquote()->render('quote');                                         };
+}
 
 under sub { shift->checklogin() and return 1; return undef; };
 
@@ -562,6 +583,7 @@ Add a new quote:
 %= form_for url_for('/add') => (method => 'post') => (class => 'add') => begin
 %= text_area 'quote'
 <br />
+%== $recaptcha_html;
 %= submit_button 'Submit!'
 %= end
 

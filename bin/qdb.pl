@@ -12,7 +12,6 @@ use Mojo::Pg;
 
 plugin 'Config';
 
-#plugin 'Database', app->config()->{database}; #configuration in qdb.conf file
 
 my $pg = do {
     my $dsn     = app->config()->{database}{dsn} // 'dbi:Pg:dbname=qdb';

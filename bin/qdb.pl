@@ -5,7 +5,7 @@ use warnings;
 
 use 5.010.001;
 
-use Mojolicious::Lite;
+use Mojolicious::Lite; # gives us: app, plugin, helper, under, group, post, get
 use Regexp::Common qw/ URI /;
 use POSIX qw/ ceil /;
 use Mojo::Pg;

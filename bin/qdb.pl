@@ -69,10 +69,10 @@ post '/admin'             => sub { shift->login()->render('login');             
 group {
     get  '/add'               => sub { shift->use_recaptcha()->render('add');                                                       };
 
-    under sub { shift->validate() and return 1; return undef; }
+    under sub { shift->validate() and return 1; return undef; };
 
     post '/add'               => sub { shift->addquote()->render('quote');                                         };
-}
+};
 
 group {
     under sub { shift->checklogin() and return 1; return undef; };
@@ -83,7 +83,7 @@ group {
     get  '/quote/:id/approve' => sub { shift->approvequote()->go_back()                                            };
     get  '/quote/:id/delete'  => sub { shift->deletequote()->go_back()                                             };
     get  '/logout'            => sub { shift->logout()->render('login');                                           };
-}
+};
 
 ## Helper section
 helper db => sub { $pg->db() };

@@ -74,7 +74,7 @@ post '/admin'             => sub { shift->login()->render('login');             
 group {
     get  '/add'               => sub { shift->captcha()->render('add');                                                       };
 
-    under sub { shift->validate() and return 1; return undef; };
+    under sub { my $self = shift; $self->validate() and return 1; $self->go_back(); return undef; };
 
     post '/add'               => sub { shift->addquote()->render('quote');                                         };
 };

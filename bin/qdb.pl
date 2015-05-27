@@ -74,14 +74,16 @@ group {
     post '/add'               => sub { shift->addquote()->render('quote');                                         };
 }
 
-under sub { shift->checklogin() and return 1; return undef; };
+group {
+    under sub { shift->checklogin() and return 1; return undef; };
 
-get  '/waiting'           => sub { shift->render('waiting');                                                   };
-get  '/quote/:id/edit'    => sub { shift->loadquote()->render('edit');                                         };
-post '/quote/:id/edit'    => sub { shift->editquote()->render('quote');                                        };
-get  '/quote/:id/approve' => sub { shift->approvequote()->go_back()                                            };
-get  '/quote/:id/delete'  => sub { shift->deletequote()->go_back()                                             };
-get  '/logout'            => sub { shift->logout()->render('login');                                           };
+    get  '/waiting'           => sub { shift->render('waiting');                                                   };
+    get  '/quote/:id/edit'    => sub { shift->loadquote()->render('edit');                                         };
+    post '/quote/:id/edit'    => sub { shift->editquote()->render('quote');                                        };
+    get  '/quote/:id/approve' => sub { shift->approvequote()->go_back()                                            };
+    get  '/quote/:id/delete'  => sub { shift->deletequote()->go_back()                                             };
+    get  '/logout'            => sub { shift->logout()->render('login');                                           };
+}
 
 ## Helper section
 helper db => sub { $pg->db() };

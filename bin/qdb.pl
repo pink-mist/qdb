@@ -352,8 +352,6 @@ helper go_back => sub {
 
     my $results = $self->flash('results');
     $self->flash(results => $results) if defined $results;
-    warn "Flashing back: @{ $results }" if defined $results;
-    warn "Not flashing back!" if not defined $results;
 
     $self->redirect_to($self->req->headers->referrer() // $self->url_for('/list'));
 };

@@ -27,9 +27,14 @@ if (defined(my $captcha = app->config()->{captcha})) {
 
        return $self->validate_recaptcha($params);
     };
+    helper captcha => sub {
+        my $self = shift;
+        $self->use_recaptcha();
+        return $self;
+    };
 }
 else {
-    helper use_recaptcha => sub { shift->stash(recaptcha_html => '') };
+    helper captcha => sub { shift->stash(recaptcha_html => '') };
     helper validate => sub { return 1 };
 }
 
@@ -67,7 +72,7 @@ get  '/admin'             => sub { shift->declare('error')->render('login');    
 post '/admin'             => sub { shift->login()->render('login');                                            };
 
 group {
-    get  '/add'               => sub { shift->use_recaptcha()->render('add');                                                       };
+    get  '/add'               => sub { shift->captcha()->render('add');                                                       };
 
     under sub { shift->validate() and return 1; return undef; };
 

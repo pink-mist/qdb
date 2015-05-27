@@ -293,15 +293,18 @@ helper latest => sub {
 
 helper query => sub {
     my $self = shift;
-    my ($sql, @args) = @_;
+    my ($query, @args) = @_;
 
-    my $sth = eval {
-        my $res = $self->db->query($sql);
-        $res->sth();
+    app->log->debug('DB Query:', $query, 'Args:', @args);
+
+    my $res = eval {
+        my $sth = $self->db->dbh->prepare($query);
+        $sth->execute(@args);
+        $sth;
     };
 
-    app->log->error("Mojo::Pg had an error: $@") if not defined $sth;
-    return $sth;
+    app->log->error("Could not execute DB Query: $@") if not defined $res;
+    return $res;
 };
 
 helper quotetohtml => sub {
@@ -365,7 +368,8 @@ helper clamp => sub {
     return $self;
 };
 
-app->db->do(
+app->query_row('SELECT * FROM pg_class WHERE relname=?', 'quotes') //
+app->db->dbh->do(
 'CREATE TABLE IF NOT EXISTS quotes (
         id SERIAL PRIMARY KEY,
         text TEXT,

@@ -322,15 +322,13 @@ helper query => sub {
     my $self = shift;
     my ($query, @args) = @_;
 
-    app->log->debug('DB Query:', $query, 'Args:', @args);
-
     my $res = eval {
         my $sth = $self->db->dbh->prepare($query);
         $sth->execute(@args);
         $sth;
     };
 
-    app->log->error("Could not execute DB Query: $@") if not defined $res;
+    app->log->error("Could not execute DB Query:", $query, "With args:", @args, "Error: $@") if not defined $res;
     return $res;
 };
 

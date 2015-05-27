@@ -2,6 +2,9 @@
     # CHANGE THESE
     hypnotoad => {
         listen => [ 'http://127.0.0.1:80/', 'http://[::1]:80/', ],
+    },
+
+    usergroup => {
         user   => 'qdb',
         group  => 'users',
     },

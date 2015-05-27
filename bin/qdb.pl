@@ -12,6 +12,11 @@ use Mojo::Pg;
 
 plugin 'Config';
 
+# Check if usergroup is configured
+if (defined(my $usergroup = app->config()->{usergroup})) {
+    plugin SetUserGroup => $usergroup;
+}
+
 
 my $pg = do {
     my $dsn     = app->config()->{database}{dsn} // 'dbi:Pg:dbname=qdb';

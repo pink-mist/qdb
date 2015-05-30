@@ -23,12 +23,24 @@ if (defined(my $captcha = app->config()->{captcha})) {
     helper validate => sub {
        my $self = shift;
 
+       return 1 if $self->session('validated');
+
        my $params = $self->req->params->to_hash;
 
-       return $self->validate_recaptcha($params);
+       my $result = $self->validate_recaptcha($params);
+
+       return unless $result;
+
+       $self->session(validated => 1);
+
+       return 1;
     };
     helper captcha => sub {
         my $self = shift;
+
+        return $self->stash(recaptcha_html => '')
+            if $self->session('validated');
+
         $self->use_recaptcha();
         return $self;
     };
@@ -54,7 +66,7 @@ my $pg = do {
 app->secrets(app->config()->{secrets});
 
 ## Route section
-under sub { shift->session(expiration => 604_800); }; #1 week
+under sub { shift->session(expiration => 6_048_000); }; #10 weeks
 
 get  '/'                  => sub { shift->latest()->render('list');                                            };
 get  '/quote/:id'         => sub { shift->loadquote()->render('quote');                                        };

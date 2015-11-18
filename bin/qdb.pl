@@ -408,15 +408,6 @@ helper clamp => sub {
     return $self;
 };
 
-app->query_row('SELECT * FROM pg_class WHERE relname=?', 'quotes') //
-app->db->dbh->do(
-'CREATE TABLE IF NOT EXISTS quotes (
-        id SERIAL PRIMARY KEY,
-        text TEXT,
-        vote INTEGER DEFAULT 0,
-        approved BOOLEAN DEFAULT FALSE
-)');
-
 app->start();
 
 __DATA__

@@ -1,0 +1,21 @@
+#!/usr/bin/env perl
+
+use strict;
+use warnings;
+
+use DBI;
+
+my $dbname = shift // 'qdb';
+
+system 'createdb', $dbname;
+
+my $dbh = DBI->connect("dbi:Pg:dbname=$dbname", '', '', {AutoCommit=>1, RaiseError=>1});
+
+$dbh->do(<<"SQL");
+CREATE TABLE IF NOT EXISTS quotes (
+        id SERIAL PRIMARY KEY,
+        text TEXT,
+        vote INTEGER DEFAULT 0,
+        approved BOOLEAN DEFAULT FALSE
+);
+SQL

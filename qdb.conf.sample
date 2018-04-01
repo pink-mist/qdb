@@ -4,11 +4,6 @@
         listen => [ 'http://127.0.0.1:80/', 'http://[::1]:80/', ],
     },
 
-    usergroup => {
-        user   => 'qdb',
-        group  => 'users',
-    },
-
     title   => 'Some random quote database...',
     secrets => [ 'quote db...' ],
     admins  => {
@@ -25,4 +20,14 @@
 #        password => 'maybe you need a password for the database',
         options => { AutoCommit => 1, RaiseError => 1, },
     },
+
+#    usergroup => {
+#        user   => 'qdb',
+#        group  => 'users',
+#    },
+
+#    captcha => {
+#        secret  => '...',
+#        sitekey => '...',
+#    },
 }

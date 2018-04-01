@@ -5,7 +5,7 @@ if [ -z $1 ]; then
     exit 1
 fi
 
-FILES="bin/qdb.pl qdb.conf.sample README public/"
+FILES="init bin/qdb.pl qdb.conf.sample README LICENSE public/"
 QDB="qdb-$1"
 
 mkdir $QDB

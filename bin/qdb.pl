@@ -19,7 +19,7 @@ if (defined(my $usergroup = app->config()->{usergroup})) {
 
 # Check for captcha configuration
 if (defined(my $captcha = app->config()->{captcha})) {
-    plugin 'Captcha::reCAPTCHA' => $captcha;
+    plugin 'ReCAPTCHAv2' => $captcha;
     helper validate => sub {
        my $self = shift;
 
@@ -27,7 +27,7 @@ if (defined(my $captcha = app->config()->{captcha})) {
 
        my $params = $self->req->params->to_hash;
 
-       my $result = $self->validate_recaptcha($params);
+       my $result = $self->recaptcha_verify();
 
        return unless $result;
 
@@ -41,7 +41,8 @@ if (defined(my $captcha = app->config()->{captcha})) {
         return $self->stash(recaptcha_html => '')
             if $self->session('validated');
 
-        $self->use_recaptcha();
+        $self->stash(recaptcha_html =>
+          sprintf '<div id="recaptcha">%s</div>', $self->recaptcha_get_html);
         return $self;
     };
 }

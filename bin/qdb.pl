@@ -11,6 +11,7 @@ use POSIX qw/ ceil /;
 use Mojo::Pg;
 
 plugin 'Config';
+plugin 'ACME';
 
 # Check if usergroup is configured
 if (defined(my $usergroup = app->config()->{usergroup})) {
